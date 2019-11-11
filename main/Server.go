@@ -1,25 +1,13 @@
 package main
 
-import (
-	"fmt"
-	"net/http"
-)
-
-func IndexHandler(w http.ResponseWriter, r *http.Request) {
-	defer func() {
-		if err := recover(); err != nil {
-			panic(err)
-		}
-	}()
-
-	_, err1 := fmt.Fprintln(w, "hello world")
-	panic(err1)
-}
+import "github.com/gin-gonic/gin"
 
 func main() {
-	http.HandleFunc("/", IndexHandler)
-	err := http.ListenAndServe("127.0.0.1:8000", nil)
-	if err != nil {
-		panic(err)
-	}
+	r := gin.Default()
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(200, gin.H{
+			"message": "pong",
+		})
+	})
+	r.Run() // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 }
