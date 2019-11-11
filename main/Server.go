@@ -8,10 +8,15 @@ import (
 	"time"
 )
 
+const (
+	LOG_PATH            = "./output/"
+	LOG_FILE_NAME       = "server.log"
+	QUEUE_MAX_USER      = 100 * 10000
+	QUEUE_MAX_USER_WAIT = 20 * 1000
+)
+
 func main() {
-	logFilePath := "./output/"
-	logFileName := "server.log"
-	logrus1 := createLogger(logFilePath, logFileName)
+	logrus1 := createLogger(LOG_PATH, LOG_FILE_NAME)
 
 	r := gin.Default()
 	r.Use(LoggerToFile(logrus1))
