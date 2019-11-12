@@ -160,6 +160,8 @@ func (q *QueueService) TryJoin(id int64, nickname string) bool {
 	currentUser.id = id
 	currentUser.nickName = nickname
 
+	Info(currentUser.String(), " try join")
+
 	waitSize := q.waitList.Size()
 	if waitSize >= q.maxWaitCount {
 		Error(currentUser.String(), " try join fail cause the waitSize:", waitSize, ">", q.maxWaitCount)
