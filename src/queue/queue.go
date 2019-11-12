@@ -3,7 +3,9 @@ package queue
 import (
 	"fmt"
 	"github.com/emirpasic/gods/lists/singlylinkedlist"
+	"runtime"
 	"sync"
+	"time"
 )
 
 type User struct {
@@ -48,21 +50,99 @@ func (userStateInfo UserQueueStateInfo) String() string {
 }
 
 type QueueService struct {
-	handleChan   chan UserQueueStateInfo
-	waitChan     chan UserQueueStateInfo
-	waitList     *singlylinkedlist.List
-	maxWaitCount int
-	userInfoMap  sync.Map
-	lock         *sync.RWMutex
+	handleChan     chan UserQueueStateInfo
+	waitChan       chan UserQueueStateInfo
+	waitList       *singlylinkedlist.List
+	maxWaitCount   int
+	maxHandleCount int
+	userInfoMap    *sync.Map
+	lock           *sync.RWMutex
+}
+
+func (q *QueueService) handleWaitChan() {
+	for {
+		select {
+		case userStateInfo := <-q.waitChan:
+			{
+				join2TheWaitList(q, userStateInfo)
+			}
+		default:
+			Error("q.waitChan is not all userStateInfo")
+		}
+	}
+}
+
+func join2TheWaitList(q *QueueService, info UserQueueStateInfo) {
+	q.lock.Lock()
+	defer q.lock.Unlock()
+
+	info.stateInfo.state = ING
+	info.stateInfo.extInfo = fmt.Sprint(q.waitList.Size())
+	q.waitList.Append(info)
+}
+
+func (q *QueueService) handleWaitList() {
+	for {
+		func() {
+			q.lock.Lock()
+			defer q.lock.Unlock()
+
+			count := q.maxHandleCount
+			for ; count > 0; count-- {
+				q.handleWaitList0()
+			}
+		}()
+
+		time.Sleep(time.Duration(10) * time.Millisecond)
+	}
+}
+
+func (q *QueueService) handleWaitList0() {
+	if q.waitList.Size() == 0 {
+		return
+	}
+
+	userStateInfo1, _ := q.waitList.Get(0)
+	userStateInfo := userStateInfo1.(UserQueueStateInfo)
+	userStateInfo.stateInfo.extInfo = "1"
+	q.waitList.Remove(0)
+
+	go func() {
+		q.handleChan <- userStateInfo
+	}()
+}
+
+func (q *QueueService) handleHandleChan() {
+	for {
+		select {
+		case userStateInfo := <-q.handleChan:
+			{
+				handleToken(q, userStateInfo)
+			}
+		default:
+			Error("q.handleChan is not all userStateInfo")
+		}
+	}
+}
+
+func handleToken(q *QueueService, info UserQueueStateInfo) {
+	info.stateInfo.state = COMPLETE
+	info.stateInfo.extInfo = "token"
 }
 
 func New(maxHandleCount int, maxWaitCount int) *QueueService {
 	queueService := new(QueueService)
+	queueService.maxHandleCount = maxHandleCount
 	queueService.handleChan = make(chan UserQueueStateInfo, maxHandleCount)
-	queueService.waitChan = make(chan UserQueueStateInfo)
+	queueService.waitChan = make(chan UserQueueStateInfo, runtime.NumCPU()*2)
 	queueService.maxWaitCount = maxWaitCount
 	queueService.waitList = singlylinkedlist.New()
 	queueService.lock = new(sync.RWMutex)
+	queueService.userInfoMap = new(sync.Map)
+
+	go queueService.handleWaitChan()
+	go queueService.handleWaitList()
+	go queueService.handleHandleChan()
 
 	return queueService
 }
