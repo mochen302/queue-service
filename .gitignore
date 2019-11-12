@@ -1,0 +1,7 @@
+/output
+/vendor
+**/*.log
+/go.mod
+/go.sum
+**/report
+/jmeter/report/
