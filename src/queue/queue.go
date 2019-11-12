@@ -46,7 +46,7 @@ type UserQueueStateInfo struct {
 }
 
 func (userStateInfo *UserQueueStateInfo) String() string {
-	return fmt.Sprintf("user:%v stateInfo:%v", userStateInfo.user.String(), userStateInfo.stateInfo.String())
+	return fmt.Sprintf("user:{%v} stateInfo:{%v}", userStateInfo.user.String(), userStateInfo.stateInfo.String())
 }
 
 type QueueService struct {

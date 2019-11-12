@@ -10,7 +10,7 @@ import (
 const (
 	LOG_PATH         = "./output/"
 	LOG_FILE_NAME    = "server.log"
-	SERVER_PORT      = "8080"
+	ADDRESS          = "127.0.0.1:8080"
 	MAX_HANDLE_COUNT = 100
 	MAX_WAIT_COUNT   = 20 * 10000
 )
@@ -24,9 +24,9 @@ func main() {
 	r := gin.Default()
 	r.Use(LoggerToFile(queue.Logger()))
 	queue.Router(r, queueService)
-	err := r.Run(SERVER_PORT) // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
+	err := r.Run(ADDRESS)
 	if err != nil {
-		panic("start server at:localhost:8080 error" + err.Error())
+		panic("start server at:" + ADDRESS + " error" + err.Error())
 	}
 }
 

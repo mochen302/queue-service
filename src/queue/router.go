@@ -7,16 +7,16 @@ import (
 )
 
 func Router(r *gin.Engine, queueService *QueueService) {
-	r.POST("/queue/join", func(c *gin.Context) {
+	r.GET("/queue/join", func(c *gin.Context) {
 
-		strId := c.Param("id")
+		strId := c.Query("id")
 		id, err := strconv.ParseInt(strId, 10, 64)
 		if err != nil {
-			setResponse(c, 500, fmt.Sprintf("id:%v is not int64", strId))
+			setResponse(c, 500, fmt.Sprintf("id:%v is not int64", strId)+err.Error())
 			return
 		}
 
-		nickName := c.Param("nickname")
+		nickName := c.Query("nickname")
 
 		func() {
 			defer func() {
@@ -32,12 +32,12 @@ func Router(r *gin.Engine, queueService *QueueService) {
 
 	})
 
-	r.POST("/queue/query", func(c *gin.Context) {
+	r.GET("/queue/query", func(c *gin.Context) {
 
-		strId := c.Param("id")
+		strId := c.Query("id")
 		id, err := strconv.ParseInt(strId, 10, 64)
 		if err != nil {
-			setResponse(c, 500, fmt.Sprintf("id:%v is not int64", strId))
+			setResponse(c, 500, fmt.Sprintf("id:%v is not int64", strId)+err.Error())
 			return
 		}
 
