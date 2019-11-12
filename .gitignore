@@ -1,3 +1,5 @@
 output
 vendor
 **/*.log
+./go.mod
+./go.sum
