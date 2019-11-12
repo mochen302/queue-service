@@ -185,7 +185,7 @@ func (q *QueueService) TryJoin(id int64, nickname string) bool {
 
 	q.userInfoMap.Store(id, userStateInfo)
 	q.waitChan <- userStateInfo
-	Debug(userStateInfo.String(), " join wait queue suc!")
+	Info(userStateInfo.String(), " join wait queue suc!")
 	return true
 }
 
