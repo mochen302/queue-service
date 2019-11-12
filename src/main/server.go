@@ -19,20 +19,11 @@ func main() {
 
 	queue.LoggerInit(LOG_PATH, LOG_FILE_NAME)
 
+	queueService := queue.New(MAX_HANDLE_COUNT, MAX_WAIT_COUNT)
+
 	r := gin.Default()
 	r.Use(LoggerToFile(queue.Logger()))
-
-	r.POST("/get/:key/:value", func(c *gin.Context) {
-
-		key := c.Param("key")
-		value := c.Param("value")
-
-		c.JSON(200, gin.H{
-			"message": "pong",
-			key:       value,
-		})
-	})
-
+	queue.Router(r, queueService)
 	err := r.Run(SERVER_PORT) // listen and serve on 0.0.0.0:8080 (for windows "localhost:8080")
 	if err != nil {
 		panic("start server at:localhost:8080 error" + err.Error())
