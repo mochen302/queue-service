@@ -63,11 +63,7 @@ func (q *QueueService) handleWaitChan() {
 	for {
 		select {
 		case userStateInfo := <-q.waitChan:
-			{
-				join2TheWaitList(q, userStateInfo)
-			}
-		default:
-			Error("q.waitChan is not all userStateInfo")
+			join2TheWaitList(q, userStateInfo)
 		}
 	}
 }
@@ -116,11 +112,7 @@ func (q *QueueService) handleHandleChan() {
 	for {
 		select {
 		case userStateInfo := <-q.handleChan:
-			{
-				handleToken(q, userStateInfo)
-			}
-		default:
-			Error("q.handleChan is not all userStateInfo")
+			handleToken(q, userStateInfo)
 		}
 	}
 }
