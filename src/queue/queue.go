@@ -202,5 +202,7 @@ func (q *QueueService) QueryState(id int64) *UserQueueStateInfo {
 	if userStateInfo.stateInfo.state == ING {
 		q.updateUserRanking(userStateInfo)
 	}
+
+	Info(fmt.Sprintf("QueryState id:%v result:%v", id, userStateInfo.String()))
 	return userStateInfo
 }
