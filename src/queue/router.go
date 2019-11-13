@@ -46,7 +46,8 @@ func handleInternal(c *gin.Context, f func(p ...interface{}) (result interface{}
 	defer func() {
 		err := recover()
 		if err != nil {
-			setResponse(c, http.StatusInternalServerError, fmt.Sprintf(err.(string)))
+			Error(err)
+			setResponse(c, http.StatusInternalServerError, "internal error")
 		}
 	}()
 

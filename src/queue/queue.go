@@ -200,8 +200,9 @@ func New(handleChanLength int, maxWaitCount int) *Queue {
 }
 
 func (q *Queue) TryJoin(p ...interface{}) interface{} {
-	id := p[0].(int64)
-	nickname := p[1].(string)
+	p0 := p[0].([]interface{})
+	id := p0[0].(int64)
+	nickname := p0[1].(string)
 
 	currentUser := new(User)
 	currentUser.id = id
@@ -241,7 +242,8 @@ func (q *Queue) TryJoin(p ...interface{}) interface{} {
 }
 
 func (q *Queue) QueryState(p ...interface{}) interface{} {
-	id := p[0].(int)
+	p0 := p[0].([]interface{})
+	id := p0[0].(int64)
 	userStateInfo1, ok := q.userInfoMap.Load(id)
 	if !ok {
 		Error("id:", id, " QueryState failed")
