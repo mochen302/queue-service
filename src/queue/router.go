@@ -8,6 +8,7 @@ import (
 )
 
 func Router(r *gin.Engine, queueService *Queue) {
+	/*本不应该用GET方式，只是方便浏览器访问*/
 	r.GET("/queue/join", func(c *gin.Context) {
 
 		strId := c.Query("id")
@@ -33,6 +34,7 @@ func Router(r *gin.Engine, queueService *Queue) {
 
 	})
 
+	/*本不应该用GET方式，只是方便浏览器访问*/
 	r.GET("/queue/query", func(c *gin.Context) {
 
 		strId := c.Query("id")
