@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func Router(r *gin.Engine, queueService *QueueService) {
+func Router(r *gin.Engine, queueService *Queue) {
 	r.GET("/queue/join", func(c *gin.Context) {
 
 		strId := c.Query("id")

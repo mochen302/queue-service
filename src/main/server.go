@@ -78,15 +78,16 @@ func LoggerToFile(logger *logrus.Logger) gin.HandlerFunc {
 	}
 }
 
-func gracefulExitWeb(queueService *queue.QueueService, server *http.Server) {
+func gracefulExitWeb(queueService *queue.Queue, server *http.Server) {
 	ch := make(chan os.Signal)
 	signal.Notify(ch, syscall.SIGTERM, syscall.SIGQUIT, syscall.SIGINT)
 	sig := <-ch
 	queue.Error("got a signal", sig)
 
+	now := time.Now()
+
 	queueService.Close()
 
-	now := time.Now()
 	cxt, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	err := server.Shutdown(cxt)

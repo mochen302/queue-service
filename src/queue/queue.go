@@ -49,7 +49,7 @@ func (userStateInfo *UserQueueStateInfo) String() string {
 	return fmt.Sprintf("user:{%v} stateInfo:{%v}", userStateInfo.user.String(), userStateInfo.stateInfo.String())
 }
 
-type QueueService struct {
+type Queue struct {
 	/*最终处理的chan*/
 	handleChan chan *UserQueueStateInfo
 	/*最终处理的chan缓冲区大小*/
@@ -66,7 +66,7 @@ type QueueService struct {
 	lock *sync.RWMutex
 }
 
-func (q *QueueService) handleWaitChan() {
+func (q *Queue) handleWaitChan() {
 	for {
 		select {
 		case userStateInfo := <-q.wait2JoinChan:
@@ -75,7 +75,7 @@ func (q *QueueService) handleWaitChan() {
 	}
 }
 
-func join2TheWaitList(q *QueueService, info *UserQueueStateInfo) {
+func join2TheWaitList(q *Queue, info *UserQueueStateInfo) {
 	/*todo 此处锁的粒度太大了，时间限制以后优化*/
 	q.lock.Lock()
 	defer q.lock.Unlock()
@@ -85,7 +85,7 @@ func join2TheWaitList(q *QueueService, info *UserQueueStateInfo) {
 	q.waitList.Append(info)
 }
 
-func (q *QueueService) handleWaitList() {
+func (q *Queue) handleWaitList() {
 	for {
 		func() {
 			/*todo 此处锁的粒度太大了，时间限制以后优化*/
@@ -102,7 +102,7 @@ func (q *QueueService) handleWaitList() {
 	}
 }
 
-func (q *QueueService) handleWaitList0() {
+func (q *Queue) handleWaitList0() {
 	if q.waitList.Size() == 0 {
 		return
 	}
@@ -117,7 +117,7 @@ func (q *QueueService) handleWaitList0() {
 	}()
 }
 
-func (q *QueueService) handleHandleChan() {
+func (q *Queue) handleHandleChan() {
 	for {
 		select {
 		case userStateInfo := <-q.handleChan:
@@ -126,12 +126,12 @@ func (q *QueueService) handleHandleChan() {
 	}
 }
 
-func handleToken(q *QueueService, info *UserQueueStateInfo) {
+func handleToken(q *Queue, info *UserQueueStateInfo) {
 	info.stateInfo.state = COMPLETE
 	info.stateInfo.extInfo = "token"
 }
 
-func (q *QueueService) updateUserRanking(info *UserQueueStateInfo) {
+func (q *Queue) updateUserRanking(info *UserQueueStateInfo) {
 	q.lock.RLock()
 	defer q.lock.RUnlock()
 
@@ -147,8 +147,8 @@ func (q *QueueService) updateUserRanking(info *UserQueueStateInfo) {
 	info.stateInfo.extInfo = fmt.Sprint(ranking)
 }
 
-func New(maxHandleCount int, maxWaitCount int) *QueueService {
-	queueService := new(QueueService)
+func New(maxHandleCount int, maxWaitCount int) *Queue {
+	queueService := new(Queue)
 	queueService.handleChanCount = maxHandleCount
 	queueService.handleChan = make(chan *UserQueueStateInfo, maxHandleCount)
 	queueService.wait2JoinChan = make(chan *UserQueueStateInfo, runtime.NumCPU()*2)
@@ -164,7 +164,7 @@ func New(maxHandleCount int, maxWaitCount int) *QueueService {
 	return queueService
 }
 
-func (q *QueueService) TryJoin(id int64, nickname string) bool {
+func (q *Queue) TryJoin(id int64, nickname string) bool {
 	currentUser := new(User)
 	currentUser.id = id
 	currentUser.nickName = nickname
@@ -200,7 +200,7 @@ func (q *QueueService) TryJoin(id int64, nickname string) bool {
 	return true
 }
 
-func (q *QueueService) QueryState(id int64) *UserQueueStateInfo {
+func (q *Queue) QueryState(id int64) *UserQueueStateInfo {
 	userStateInfo1, ok := q.userInfoMap.Load(id)
 	if !ok {
 		Error("id:", id, " QueryState failed")
@@ -216,7 +216,7 @@ func (q *QueueService) QueryState(id int64) *UserQueueStateInfo {
 	return userStateInfo
 }
 
-func (q *QueueService) Close() {
+func (q *Queue) Close() {
 	defer func() {
 		error := recover()
 		if error != nil {
