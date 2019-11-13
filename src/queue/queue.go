@@ -109,6 +109,12 @@ func join2TheWaitList(q *Queue, info *UserQueueStateInfo) {
 	/*todo 此处锁的粒度太大了，时间限制以后优化*/
 	q.lock.Lock()
 	defer q.lock.Unlock()
+	defer func() {
+		err := recover()
+		if err != nil {
+			Error(info.String(), " join2TheWaitList error", err)
+		}
+	}()
 
 	info.stateInfo.state = ING
 	info.stateInfo.extInfo = fmt.Sprint(q.waitList.Size())
@@ -123,6 +129,12 @@ func (q *Queue) handleWaitList() {
 			/*todo 此处锁的粒度太大了，时间限制以后优化*/
 			q.lock.Lock()
 			defer q.lock.Unlock()
+			defer func() {
+				err := recover()
+				if err != nil {
+					Error(" handleWaitList error", err)
+				}
+			}()
 
 			count := q.handleChanLength
 			for ; count > 0; count-- {
@@ -159,6 +171,13 @@ func (q *Queue) handleHandleChan() {
 }
 
 func handleToken(q *Queue, info *UserQueueStateInfo) {
+	defer func() {
+		err := recover()
+		if err != nil {
+			Error(info.String(), " handleToken error", err)
+		}
+	}()
+
 	info.stateInfo.state = COMPLETE
 	info.stateInfo.extInfo = "token"
 	Info(info.String(), " handle suc!")
