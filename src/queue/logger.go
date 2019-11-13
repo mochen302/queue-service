@@ -10,7 +10,7 @@ import (
 var logger *logrus.Logger
 var lock sync.Mutex
 
-func LoggerInit(logFilePath string, logFileName string) {
+func LoggerInit(logFilePath string, logFileName string, level logrus.Level) {
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -18,7 +18,7 @@ func LoggerInit(logFilePath string, logFileName string) {
 		return
 	}
 
-	logger = createLogger(logFilePath, logFileName)
+	logger = createLogger(logFilePath, logFileName, level)
 }
 
 func Logger() *logrus.Logger {
@@ -52,7 +52,7 @@ func checkLoggerInit() {
 	}
 }
 
-func createLogger(logFilePath string, logFileName string) *logrus.Logger {
+func createLogger(logFilePath string, logFileName string, level logrus.Level) *logrus.Logger {
 	//日志文件
 	fileName := path.Join(logFilePath, logFileName)
 
@@ -69,7 +69,7 @@ func createLogger(logFilePath string, logFileName string) *logrus.Logger {
 	logger.Out = src
 
 	//设置日志级别
-	logger.SetLevel(logrus.DebugLevel)
+	logger.SetLevel(level)
 
 	//设置日志格式
 	logger.SetFormatter(&logrus.TextFormatter{FullTimestamp: false})

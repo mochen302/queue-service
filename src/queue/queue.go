@@ -18,30 +18,30 @@ func (u *User) String() string {
 	return fmt.Sprintf("id:%v nickName:%v", u.id, u.nickName)
 }
 
-type QueueStateInfo struct {
-	state   QueueState
+type StateInfo struct {
+	state   State
 	extInfo string
 	fmt.Stringer
 }
 
-func (stateInfo *QueueStateInfo) String() string {
+func (stateInfo *StateInfo) String() string {
 	return fmt.Sprintf("state:%v extInfo:%v", stateInfo.state, stateInfo.extInfo)
 }
 
-type QueueState int8
+type State int8
 
 const (
 	/*处理成功 返回token*/
-	COMPLETE QueueState = 0
+	COMPLETE State = 0
 	/*正在排队 返回ranking*/
-	ING QueueState = 1
+	ING State = 1
 	/*等待加入队列*/
-	WAIT QueueState = 2
+	WAIT State = 2
 )
 
 type UserQueueStateInfo struct {
 	user      *User
-	stateInfo *QueueStateInfo
+	stateInfo *StateInfo
 	fmt.Stringer
 }
 
@@ -83,6 +83,7 @@ func join2TheWaitList(q *Queue, info *UserQueueStateInfo) {
 	info.stateInfo.state = ING
 	info.stateInfo.extInfo = fmt.Sprint(q.waitList.Size())
 	q.waitList.Append(info)
+	Info(info.String(), " join wait chan suc!")
 }
 
 func (q *Queue) handleWaitList() {
@@ -129,6 +130,7 @@ func (q *Queue) handleHandleChan() {
 func handleToken(q *Queue, info *UserQueueStateInfo) {
 	info.stateInfo.state = COMPLETE
 	info.stateInfo.extInfo = "token"
+	Info(info.String(), " handle suc!")
 }
 
 func (q *Queue) updateUserRanking(info *UserQueueStateInfo) {
@@ -188,7 +190,7 @@ func (q *Queue) TryJoin(id int64, nickname string) bool {
 
 	userStateInfo := &UserQueueStateInfo{
 		user: currentUser,
-		stateInfo: &QueueStateInfo{
+		stateInfo: &StateInfo{
 			state:   WAIT,
 			extInfo: "",
 		},
@@ -196,7 +198,7 @@ func (q *Queue) TryJoin(id int64, nickname string) bool {
 
 	q.userInfoMap.Store(id, userStateInfo)
 	q.wait2JoinChan <- userStateInfo
-	Info(userStateInfo.String(), " join wait queue suc!")
+	Info(userStateInfo.String(), " join wait chan suc!")
 	return true
 }
 
@@ -218,9 +220,9 @@ func (q *Queue) QueryState(id int64) *UserQueueStateInfo {
 
 func (q *Queue) Close() {
 	defer func() {
-		error := recover()
-		if error != nil {
-			Error("close error", error)
+		err := recover()
+		if err != nil {
+			Error("close error", err)
 		}
 	}()
 

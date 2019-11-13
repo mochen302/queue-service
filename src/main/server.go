@@ -16,6 +16,7 @@ import (
 const (
 	LOG_PATH         = "./output/"
 	LOG_FILE_NAME    = "server.log"
+	LOG_LEVEL        = "debug"
 	ADDRESS          = ":8080"
 	MAX_HANDLE_COUNT = 100
 	MAX_WAIT_COUNT   = 20 * 10000
@@ -25,7 +26,11 @@ func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	queue.LoggerInit(LOG_PATH, LOG_FILE_NAME)
+	level, error := logrus.ParseLevel(LOG_LEVEL)
+	if error != nil {
+		panic("parse log level error" + error.Error())
+	}
+	queue.LoggerInit(LOG_PATH, LOG_FILE_NAME, level)
 
 	queueService := queue.New(MAX_HANDLE_COUNT, MAX_WAIT_COUNT)
 
