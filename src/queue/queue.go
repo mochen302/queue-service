@@ -50,25 +50,33 @@ func (userStateInfo *UserQueueStateInfo) String() string {
 }
 
 type QueueService struct {
-	handleChan     chan *UserQueueStateInfo
-	waitChan       chan *UserQueueStateInfo
-	waitList       *singlylinkedlist.List
-	maxWaitCount   int
-	maxHandleCount int
-	userInfoMap    *sync.Map
-	lock           *sync.RWMutex
+	/*最终处理的chan*/
+	handleChan chan *UserQueueStateInfo
+	/*最终处理的chan缓冲区大小*/
+	handleChanCount int
+	/*等待加入waitList的chan*/
+	wait2JoinChan chan *UserQueueStateInfo
+	/*等待被处理的List*/
+	waitList *singlylinkedlist.List
+	/*等待被处理的List的最大大小*/
+	maxWaitCount int
+	/*用户信息Map*/
+	userInfoMap *sync.Map
+	/*读写锁*/
+	lock *sync.RWMutex
 }
 
 func (q *QueueService) handleWaitChan() {
 	for {
 		select {
-		case userStateInfo := <-q.waitChan:
+		case userStateInfo := <-q.wait2JoinChan:
 			join2TheWaitList(q, userStateInfo)
 		}
 	}
 }
 
 func join2TheWaitList(q *QueueService, info *UserQueueStateInfo) {
+	/*todo 此处锁的粒度太大了，时间限制以后优化*/
 	q.lock.Lock()
 	defer q.lock.Unlock()
 
@@ -80,10 +88,11 @@ func join2TheWaitList(q *QueueService, info *UserQueueStateInfo) {
 func (q *QueueService) handleWaitList() {
 	for {
 		func() {
+			/*todo 此处锁的粒度太大了，时间限制以后优化*/
 			q.lock.Lock()
 			defer q.lock.Unlock()
 
-			count := q.maxHandleCount
+			count := q.handleChanCount
 			for ; count > 0; count-- {
 				q.handleWaitList0()
 			}
@@ -140,9 +149,9 @@ func (q *QueueService) updateUserRanking(info *UserQueueStateInfo) {
 
 func New(maxHandleCount int, maxWaitCount int) *QueueService {
 	queueService := new(QueueService)
-	queueService.maxHandleCount = maxHandleCount
+	queueService.handleChanCount = maxHandleCount
 	queueService.handleChan = make(chan *UserQueueStateInfo, maxHandleCount)
-	queueService.waitChan = make(chan *UserQueueStateInfo, runtime.NumCPU()*2)
+	queueService.wait2JoinChan = make(chan *UserQueueStateInfo, runtime.NumCPU()*2)
 	queueService.maxWaitCount = maxWaitCount
 	queueService.waitList = singlylinkedlist.New()
 	queueService.lock = new(sync.RWMutex)
@@ -186,7 +195,7 @@ func (q *QueueService) TryJoin(id int64, nickname string) bool {
 	}
 
 	q.userInfoMap.Store(id, userStateInfo)
-	q.waitChan <- userStateInfo
+	q.wait2JoinChan <- userStateInfo
 	Info(userStateInfo.String(), " join wait queue suc!")
 	return true
 }
@@ -205,4 +214,19 @@ func (q *QueueService) QueryState(id int64) *UserQueueStateInfo {
 
 	Info(fmt.Sprintf("QueryState id:%v result:%v", id, userStateInfo.String()))
 	return userStateInfo
+}
+
+func (q *QueueService) Close() {
+	defer func() {
+		error := recover()
+		if error != nil {
+			Error("close error", error)
+		}
+	}()
+
+	close(q.wait2JoinChan)
+	close(q.handleChan)
+	q.waitList = nil
+	q.userInfoMap = nil
+	Info("queue.close success")
 }
