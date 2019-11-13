@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func Router(r *gin.Engine, queueService *Queue) {
+func Router(r *gin.Engine, q *Queue) {
 	/*本不应该用GET方式，只是方便浏览器访问*/
 	r.GET("/queue/join", func(c *gin.Context) {
 
@@ -20,18 +20,7 @@ func Router(r *gin.Engine, queueService *Queue) {
 
 		nickName := c.Query("nickname")
 
-		func() {
-			defer func() {
-				err := recover()
-				if err != nil {
-					setResponse(c, http.StatusInternalServerError, fmt.Sprintf(err.(string)))
-				}
-			}()
-
-			result := queueService.TryJoin(id, nickName)
-			setResponse(c, http.StatusOK, "success", fmt.Sprint(result))
-		}()
-
+		handleInternal(c, q.TryJoin, id, nickName)
 	})
 
 	/*本不应该用GET方式，只是方便浏览器访问*/
@@ -44,20 +33,25 @@ func Router(r *gin.Engine, queueService *Queue) {
 			return
 		}
 
-		func() {
-			defer func() {
-				err := recover()
-				if err != nil {
-					setResponse(c, http.StatusInternalServerError, fmt.Sprintf(err.(string)))
-				}
-			}()
-
-			result := queueService.QueryState(id)
-			setResponse(c, http.StatusOK, "success", fmt.Sprint(result))
-		}()
-
+		handleInternal(c, q.QueryState, id)
 	})
 
+	r.GET("/queue/stat", func(c *gin.Context) {
+		handleInternal(c, q.StatInfo)
+	})
+
+}
+
+func handleInternal(c *gin.Context, f func(p ...interface{}) (result interface{}), param ...interface{}) {
+	defer func() {
+		err := recover()
+		if err != nil {
+			setResponse(c, http.StatusInternalServerError, fmt.Sprintf(err.(string)))
+		}
+	}()
+
+	result := f(param)
+	setResponse(c, http.StatusOK, "success", fmt.Sprint(result))
 }
 
 func setResponse(c *gin.Context, code int, message string, result ...string) {

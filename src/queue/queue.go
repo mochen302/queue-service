@@ -5,6 +5,7 @@ import (
 	"github.com/emirpasic/gods/lists/singlylinkedlist"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -49,6 +50,21 @@ func (userStateInfo *UserQueueStateInfo) String() string {
 	return fmt.Sprintf("user:{%v} stateInfo:{%v}", userStateInfo.user.String(), userStateInfo.stateInfo.String())
 }
 
+type StatInfo struct {
+	requestCount       int32
+	handleSuccessCount int32
+
+	waitJoinChanCount int
+	waitCount         int
+	handleCount       int
+	fmt.Stringer
+}
+
+func (statInfo *StatInfo) String() string {
+	return fmt.Sprintf("requestCount:%v handleSuccessCount:%v waitJoinChanCount:%v waitCount:%v handleCount:%v",
+		statInfo.requestCount, statInfo.handleSuccessCount, statInfo.waitJoinChanCount, statInfo.waitCount, statInfo.handleCount)
+}
+
 type Queue struct {
 	/*最终处理的chan*/
 	handleChan chan *UserQueueStateInfo
@@ -64,6 +80,10 @@ type Queue struct {
 	userInfoMap *sync.Map
 	/*读写锁*/
 	lock *sync.RWMutex
+	/*请求次数*/
+	requestCount int32
+	/*处理成功次数*/
+	handleSuccessCount int32
 }
 
 func (q *Queue) handleWaitChan() {
@@ -84,6 +104,7 @@ func join2TheWaitList(q *Queue, info *UserQueueStateInfo) {
 	info.stateInfo.extInfo = fmt.Sprint(q.waitList.Size())
 	q.waitList.Append(info)
 	Info(info.String(), " join wait chan suc!")
+	atomic.AddInt32(&q.handleSuccessCount, 1)
 }
 
 func (q *Queue) handleWaitList() {
@@ -158,6 +179,8 @@ func New(handleChanLength int, maxWaitCount int) *Queue {
 	queueService.waitList = singlylinkedlist.New()
 	queueService.lock = new(sync.RWMutex)
 	queueService.userInfoMap = new(sync.Map)
+	queueService.requestCount = 0
+	queueService.handleSuccessCount = 0
 
 	go queueService.handleWaitChan()
 	go queueService.handleWaitList()
@@ -166,18 +189,15 @@ func New(handleChanLength int, maxWaitCount int) *Queue {
 	return queueService
 }
 
-func (q *Queue) TryJoin(id int64, nickname string) bool {
+func (q *Queue) TryJoin(p ...interface{}) interface{} {
+	id := p[0].(int64)
+	nickname := p[1].(string)
+
 	currentUser := new(User)
 	currentUser.id = id
 	currentUser.nickName = nickname
 
 	Info(currentUser.String(), " try join")
-
-	waitSize := q.waitList.Size()
-	if waitSize >= q.maxWaitCount {
-		Error(currentUser.String(), " try join fail cause the waitSize:", waitSize, ">", q.maxWaitCount)
-		return false
-	}
 
 	existUserStateInfo, ok := q.userInfoMap.Load(id)
 	if ok {
@@ -186,6 +206,14 @@ func (q *Queue) TryJoin(id int64, nickname string) bool {
 		 */
 		Info(existUserStateInfo.(*UserQueueStateInfo).String(), "has join before")
 		return true
+	}
+
+	atomic.AddInt32(&q.requestCount, 1)
+
+	waitSize := q.waitList.Size()
+	if waitSize >= q.maxWaitCount {
+		Error(currentUser.String(), " try join fail cause the waitSize:", waitSize, ">", q.maxWaitCount)
+		return false
 	}
 
 	userStateInfo := &UserQueueStateInfo{
@@ -202,7 +230,8 @@ func (q *Queue) TryJoin(id int64, nickname string) bool {
 	return true
 }
 
-func (q *Queue) QueryState(id int64) *UserQueueStateInfo {
+func (q *Queue) QueryState(p ...interface{}) interface{} {
+	id := p[0].(int)
 	userStateInfo1, ok := q.userInfoMap.Load(id)
 	if !ok {
 		Error("id:", id, " QueryState failed")
@@ -216,6 +245,16 @@ func (q *Queue) QueryState(id int64) *UserQueueStateInfo {
 
 	Info(fmt.Sprintf("QueryState id:%v result:%v", id, userStateInfo.String()))
 	return userStateInfo
+}
+
+func (q *Queue) StatInfo(p ...interface{}) interface{} {
+	statInfo := new(StatInfo)
+	statInfo.requestCount = q.requestCount
+	statInfo.handleSuccessCount = q.handleSuccessCount
+	statInfo.waitJoinChanCount = len(q.wait2JoinChan)
+	statInfo.waitCount = q.waitList.Size()
+	statInfo.handleCount = len(q.handleChan)
+	return statInfo
 }
 
 func (q *Queue) Close() {
