@@ -53,7 +53,7 @@ type Queue struct {
 	/*最终处理的chan*/
 	handleChan chan *UserQueueStateInfo
 	/*最终处理的chan缓冲区大小*/
-	handleChanCount int
+	handleChanLength int
 	/*等待加入waitList的chan*/
 	wait2JoinChan chan *UserQueueStateInfo
 	/*等待被处理的List*/
@@ -93,7 +93,7 @@ func (q *Queue) handleWaitList() {
 			q.lock.Lock()
 			defer q.lock.Unlock()
 
-			count := q.handleChanCount
+			count := q.handleChanLength
 			for ; count > 0; count-- {
 				q.handleWaitList0()
 			}
@@ -149,10 +149,10 @@ func (q *Queue) updateUserRanking(info *UserQueueStateInfo) {
 	info.stateInfo.extInfo = fmt.Sprint(ranking)
 }
 
-func New(maxHandleCount int, maxWaitCount int) *Queue {
+func New(handleChanLength int, maxWaitCount int) *Queue {
 	queueService := new(Queue)
-	queueService.handleChanCount = maxHandleCount
-	queueService.handleChan = make(chan *UserQueueStateInfo, maxHandleCount)
+	queueService.handleChanLength = handleChanLength
+	queueService.handleChan = make(chan *UserQueueStateInfo, handleChanLength)
 	queueService.wait2JoinChan = make(chan *UserQueueStateInfo, runtime.NumCPU()*2)
 	queueService.maxWaitCount = maxWaitCount
 	queueService.waitList = singlylinkedlist.New()

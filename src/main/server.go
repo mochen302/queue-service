@@ -5,6 +5,8 @@ import (
 	"github.com/mochen302/queue-service/src/queue"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
+	yaml "gopkg.in/yaml.v3"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/signal"
@@ -13,35 +15,40 @@ import (
 	"time"
 )
 
-const (
-	LOG_PATH         = "./output/"
-	LOG_FILE_NAME    = "server.log"
-	LOG_LEVEL        = "debug"
-	ADDRESS          = ":8080"
-	MAX_HANDLE_COUNT = 100
-	MAX_WAIT_COUNT   = 20 * 10000
-)
+const CONFIG_FILE string = "conf/application.yaml"
 
 func main() {
 
 	runtime.GOMAXPROCS(runtime.NumCPU())
 
-	level, error := logrus.ParseLevel(LOG_LEVEL)
+	yamlFile, err := ioutil.ReadFile(CONFIG_FILE)
+	if err != nil {
+		panic("can load " + CONFIG_FILE)
+	}
+
+	conf := new(queue.Config)
+	err1 := yaml.Unmarshal(yamlFile, conf)
+	if err1 != nil {
+		panic("parse " + CONFIG_FILE + " error:" + err1.Error())
+	}
+
+	level, error := logrus.ParseLevel(conf.Log.Level)
 	if error != nil {
 		panic("parse log level error" + error.Error())
 	}
-	queue.LoggerInit(LOG_PATH, LOG_FILE_NAME, level)
+	queue.LoggerInit(conf.Log.Path, conf.Log.File, level)
 
-	queueService := queue.New(MAX_HANDLE_COUNT, MAX_WAIT_COUNT)
+	queueService := queue.New(conf.Queue.Handle_chan_size, conf.Queue.Max_wait_count)
 
 	gin := gin.Default()
 	gin.Use(LoggerToFile(queue.Logger()))
 
 	queue.Router(gin, queueService)
 
-	err := gin.Run(ADDRESS)
-	if err != nil {
-		panic("start server at:" + ADDRESS + " error" + err.Error())
+	ADDRESS := conf.Server.Address
+	err2 := gin.Run(ADDRESS)
+	if err2 != nil {
+		panic("start server at:" + ADDRESS + " error" + err2.Error())
 	}
 
 	server := &http.Server{

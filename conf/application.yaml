@@ -1,0 +1,9 @@
+server:
+  address: :8080
+log:
+  path: ./output/
+  file: server.log
+  level: debug
+queue:
+  handle_chan_size: 100
+  max_wait_count: 200000
