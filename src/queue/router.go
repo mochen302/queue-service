@@ -18,6 +18,11 @@ func Router(r *gin.Engine, q *Queue) {
 			return
 		}
 
+		if id <= 0 {
+			setResponse(c, http.StatusBadRequest, fmt.Sprintf("id:%v is <=0 ", strId))
+			return
+		}
+
 		nickName := c.Query("nickname")
 
 		handleInternal(c, q.TryJoin, id, nickName)
@@ -30,6 +35,11 @@ func Router(r *gin.Engine, q *Queue) {
 		id, err := strconv.ParseInt(strId, 10, 64)
 		if err != nil {
 			setResponse(c, http.StatusBadRequest, fmt.Sprintf("id:%v is not int64", strId)+err.Error())
+			return
+		}
+
+		if id <= 0 {
+			setResponse(c, http.StatusBadRequest, fmt.Sprintf("id:%v is <=0 ", strId))
 			return
 		}
 
