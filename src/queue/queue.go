@@ -9,6 +9,37 @@ import (
 	"time"
 )
 
+/**
+线程模型如下
+                             head->... waitList(最大maxWaitCount)  ...tail
+handleChan(handleChanLength) ============================================wait2JoinChan(核数*2)
+userInfoMap根据玩家Id保存状态信息
+
+1.先将新来的请求放到waitJoinChan则返回
+2.waitJoinChan将请求信息放到waitList结尾
+3.handleChan不断从waitList头获取请求信息处理
+*/
+type Queue struct {
+	/*最终处理的chan*/
+	handleChan chan *UserQueueStateInfo
+	/*最终处理的chan缓冲区大小*/
+	handleChanLength int
+	/*等待加入waitList的chan*/
+	wait2JoinChan chan *UserQueueStateInfo
+	/*等待被处理的List*/
+	waitList *singlylinkedlist.List
+	/*等待被处理的List的最大大小*/
+	maxWaitCount int
+	/*用户信息Map*/
+	userInfoMap *sync.Map
+	/*读写锁*/
+	lock *sync.RWMutex
+	/*请求次数*/
+	requestCount int32
+	/*处理成功次数*/
+	handleSuccessCount int32
+}
+
 type User struct {
 	id       int64
 	nickName string
@@ -63,27 +94,6 @@ type StatInfo struct {
 func (statInfo *StatInfo) String() string {
 	return fmt.Sprintf("requestCount:%v handleSuccessCount:%v waitJoinChanCount:%v waitCount:%v handleCount:%v",
 		statInfo.requestCount, statInfo.handleSuccessCount, statInfo.waitJoinChanCount, statInfo.waitCount, statInfo.handleCount)
-}
-
-type Queue struct {
-	/*最终处理的chan*/
-	handleChan chan *UserQueueStateInfo
-	/*最终处理的chan缓冲区大小*/
-	handleChanLength int
-	/*等待加入waitList的chan*/
-	wait2JoinChan chan *UserQueueStateInfo
-	/*等待被处理的List*/
-	waitList *singlylinkedlist.List
-	/*等待被处理的List的最大大小*/
-	maxWaitCount int
-	/*用户信息Map*/
-	userInfoMap *sync.Map
-	/*读写锁*/
-	lock *sync.RWMutex
-	/*请求次数*/
-	requestCount int32
-	/*处理成功次数*/
-	handleSuccessCount int32
 }
 
 func (q *Queue) handleWaitChan() {
