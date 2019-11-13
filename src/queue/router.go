@@ -77,7 +77,7 @@ func handleInternal(c *gin.Context, f func(p ...interface{}) (result interface{}
 func setResponse(c *gin.Context, code int, message string, businessCode BUSINESS_CODE, result ...string) {
 	if len(result) > 0 {
 		c.JSON(code, gin.H{
-			"code":    businessCode,
+			"c":       businessCode,
 			"message": message,
 			"result":  result[0],
 		})
